@@ -1,130 +1,139 @@
-对于初学者来说，要想把这个问题回答正确，是比较难的。在第二天整理答案的时候，我发现我竟然无法通过简单的语言把这个事情描述的很容易理解，遗憾的是，我也没有在网上找到哪篇文章可以把这个事情讲解的通俗易懂。所以，就有了我写这篇文章的初衷。
+### Java的求值策略
 
-### 辟谣时间
+前面我们介绍过了传值调用、传引用调用以及传值调用的特例传共享对象调用，那么，Java中是采用的哪种求值策略呢？
 
-关于这个问题，在[StackOverflow][2]上也引发过广泛的讨论，看来很多程序员对于这个问题的理解都不尽相同，甚至很多人理解的是错误的。还有的人可能知道Java中的参数传递是值传递，但是说不出来为什么。
+很多人说Java中的基本数据类型是值传递的，这个基本没有什么可以讨论的，普遍都是这样认为的。
 
-在开始深入讲解之前，有必要纠正一下大家以前的那些错误看法了。如果你有以下想法，那么你有必要好好阅读本文。
+但是，有很多人却误认为Java中的对象传递是引用传递。之所以会有这个误区，主要是因为Java中的变量和对象之间是有引用关系的。Java语言中是通过对象的引用来操纵对象的。所以，很多人会认为对象的传递是引用的传递。
 
-> 错误理解一：值传递和引用传递，区分的条件是传递的内容，如果是个值，就是值传递。如果是个引用，就是引用传递。
->
-> 错误理解二：Java是引用传递。
->
-> 错误理解三：传递的参数如果是普通类型，那就是值传递，如果是对象，那就是引用传递。
+而且很多人还可以举出以下的代码示例：
 
+    public static void main(String[] args) {
+      Test pt = new Test();
+    
+      User hollis = new User();
+      hollis.setName("Hollis");
+      hollis.setGender("Male");
+      pt.pass(hollis);
+      System.out.println("print in main , user is " + hollis);
+    }
+    
+    public void pass(User user) {
+      user.setName("hollischuang");
+      System.out.println("print in pass , user is " + user);
+    }
+    
 
-### Java中的值传递
-
-值传递和引用传的的定义如下：
-
-> 值传递（pass by value）是指在调用函数时将实际参数`复制`一份传递到函数中，这样在函数中如果对`参数`进行修改，将不会影响到实际参数。
->
-> 引用传递（pass by reference）是指在调用函数时将实际参数的地址`直接`传递到函数中，那么在函数中对`参数`所进行的修改，将影响到实际参数。
-
-
-你有一把钥匙，当你的朋友想要去你家的时候，如果你`直接`把你的钥匙给他了，这就是引用传递。这种情况下，如果他对这把钥匙做了什么事情，比如他在钥匙上刻下了自己名字，那么这把钥匙还给你的时候，你自己的钥匙上也会多出他刻的名字。
-
-你有一把钥匙，当你的朋友想要去你家的时候，你`复刻`了一把新钥匙给他，自己的还在自己手里，这就是值传递。这种情况下，他对这把钥匙做什么都不会影响你手里的这把钥匙。
-
-
-我们举一个实际的代码例子：
-```
-public static void main(String[] args) {
-  ParamTest pt = new ParamTest();
-
-  User hollis = new User();
-  hollis.setName("Hollis");
-  hollis.setGender("Male");
-  pt.pass(hollis);
-  System.out.println("print in main , user is " + hollis);
-}
-
-public void pass(User user) {
-  user = new User();
-  user.setName("hollischuang");
-  System.out.println("print in pass , user is " + user);
-}
-
-```
-
-上面的代码中，我们在pass方法中，改变了user对象，输出结果如下：
-```
-print in pass , user is User{name='hollischuang', gender='Male'}
-print in main , user is User{name='Hollis', gender='Male'}
-```
-
-
-我们来画一张图，看一下整个过程中发生了什么，然后我再告诉你，为啥Java中只有值传递。
-
-[<img src="http://www.hollischuang.com/wp-content/uploads/2018/04/pass1.png" alt="pass1" width="859" height="721" class="aligncenter size-full wp-image-2293" />][4]
-
-稍微解释下这张图，当我们在main中创建一个User对象的时候，在堆中开辟一块内存，其中保存了name和gender等数据。然后hollis持有该内存的地址`0x123456`（图1）。当尝试调用pass方法，并且hollis作为实际参数传递给形式参数user的时候，会把这个地址`0x123456`交给user，这时，user也指向了这个地址（图2）。然后在pass方法内对参数进行修改的时候，即`user = new User();`，会重新开辟一块`0X456789`的内存，赋值给user。后面对user的任何修改都不会改变内存`0X123456`的内容（图3）。
-
-上面这种传递是什么传递？肯定不是引用传递，如果是引用传递的话，在`user=new User()`的时候，实际参数的引用也应该改为指向`0X456789`，但是实际上并没有。
-
-通过概念我们也能知道，这里是把实际参数的引用的地址复制了一份，传递给了形式参数。所以，**上面的参数其实是值传递，把实参对象引用的地址当做值传递给了形式参数。**
-
-我们再来看下面的例子：
-
-```
-public static void main(String[] args) {
-  ParamTest pt = new ParamTest();
-
-  User hollis = new User();
-  hollis.setName("Hollis");
-  hollis.setGender("Male");
-  pt.pass(hollis);
-  System.out.println("print in main , user is " + hollis);
-}
-
-public void pass(User user) {
-  user.setName("hollischuang");
-  System.out.println("print in pass , user is " + user);
-}
-
-```
 输出结果：
-```
-print in pass , user is User{name='hollischuang', gender='Male'}
-print in main , user is User{name='hollischuang', gender='Male'}
-```
 
-过程如下：
+    print in pass , user is User{name='hollischuang', gender='Male'}
+    print in main , user is User{name='hollischuang', gender='Male'}
+    
 
-[<img src="http://www.hollischuang.com/wp-content/uploads/2018/04/pass21.png" alt="pass2" width="832" height="732" class="aligncenter size-full wp-image-2307" />][5]
+可以看到，对象类型在被传递到pass方法后，在方法内改变了其内容，最终调用方main方法中的对象也变了。
 
-同样的，在参数传递的过程中，实际参数的地址`0X1213456`被拷贝给了形参，只是，在这个方法中，并没有对形参本身进行修改，而是修改的形参持有的地址中存储的内容。
+所以，很多人说，这和引用传递的现象是一样的，就是在方法内改变参数的值，会影响到调用方。
 
-所以，值传递和引用传递的区别并不是传递的内容。而是实参到底有没有被复制一份给形参。在判断实参内容有没有受影响的时候，要看传的的是什么，如果你传递的是个地址，那么就看这个地址的变化会不会有影响，而不是看地址指向的对象的变化。就像钥匙和房子的关系。
+但是，其实这是走进了一个误区。
 
-**所以说，Java中其实还是值传递的，只不过对于对象参数，值的内容是对象的引用。**
+### Java中的对象传递
+
+很多人通过代码示例的现象说明Java对象是引用传递，那么我们就从现象入手，先来反驳下这个观点。
+
+我们前面说过，无论是值传递，还是引用传递，只不过是求值策略的一种，那求值策略还有很多，比如前面提到的共享对象传递的现象和引用传递也是一样的。那凭什么就说Java中的参数传递就一定是引用传递而不是共享对象传递呢？
+
+那么，Java中的对象传递，到底是哪种形式呢？其实，还真的就是共享对象传递。
+
+其实在 《The Java™ Tutorials》中，是有关于这部分内容的说明的。首先是关于基本类型描述如下：
+
+> Primitive arguments, such as an int or a double, are passed into methods by value. This means that any changes to the values of the parameters exist only within the scope of the method. When the method returns, the parameters are gone and any changes to them are lost.
+
+**即，原始参数通过值传递给方法。这意味着对参数值的任何更改都只存在于方法的范围内。当方法返回时，参数将消失，对它们的任何更改都将丢失。**
+
+关于对象传递的描述如下：
+
+> Reference data type parameters, such as objects, are also passed into methods by value. This means that when the method returns, the passed-in reference still references the same object as before. However, the values of the object’s fields can be changed in the method, if they have the proper access level.
+
+**也就是说，引用数据类型参数(如对象)也按值传递给方法。这意味着，当方法返回时，传入的引用仍然引用与以前相同的对象。但是，如果对象字段具有适当的访问级别，则可以在方法中更改这些字段的值。**
+
+这一点官方文档已经很明确的指出了，Java就是值传递，只不过是把对象的引用当做值传递给方法。你细品，这不就是共享对象传递么？
+
+**其实Java中使用的求值策略就是传共享对象调用，也就是说，Java会将对象的地址的拷贝传递给被调函数的形式参数。**只不过"传共享对象调用"这个词并不常用，所以Java社区的人通常说"Java是传值调用"，这么说也没错，因为传共享对象调用其实是传值调用的一个特例。
+
+### 值传递和共享对象传递的现象冲突吗？
+
+看到这里很多人可能会有一个疑问，既然共享对象传递是值传递的一个特例，那么为什么他们的现象是完全不同的呢？
+
+难道值传递过程中，如果在被调方法中改变了值，也有可能会对调用者有影响吗？那到底什么时候会影响什么时候不会影响呢？
+
+其实是不冲突的，之所以会有这种疑惑，是因为大家对于到底是什么是"改变值"有误解。
+
+我们先回到上面的例子中来，看一下调用过程中实际上发生了什么？
+
+<img src="http://www.hollischuang.com/wp-content/uploads/2018/04/pass21.png" alt="pass2" width="832" height="732" class="aligncenter size-full wp-image-2307" />
+
+在参数传递的过程中，实际参数的地址`0X1213456`被拷贝给了形参。这个过程其实就是值传递，只不过传递的值得内容是对象的应用。
+
+那为什么我们改了user中的属性的值，却对原来的user产生了影响呢？
+
+其实，这个过程就好像是：你复制了一把你家里的钥匙给到你的朋友，他拿到钥匙以后，并没有在这把钥匙上做任何改动，而是通过钥匙打开了你家里的房门，进到屋里，把你家的电视给砸了。
+
+这个过程，对你手里的钥匙来说，是没有影响的，但是你的钥匙对应的房子里面的内容却是被人改动了。
+
+也就是说，**Java对象的传递，是通过复制的方式把引用关系传递了，如果我们没有改引用关系，而是找到引用的地址，把里面的内容改了，是会对调用方有影响的，因为大家指向的是同一个共享对象。**
+
+那么，如果我们改动一下pass方法的内容：
+
+    public void pass(User user) {
+      user = new User();
+      user.setName("hollischuang");
+      System.out.println("print in pass , user is " + user);
+    }
+    
+
+上面的代码中，我们在pass方法中，重新new了一个user对象，并改变了他的值，输出结果如下：
+
+    print in pass , user is User{name='hollischuang', gender='Male'}
+    print in main , user is User{name='Hollis', gender='Male'}
+    
+
+再看一下整个过程中发生了什么：
+
+<img src="http://www.hollischuang.com/wp-content/uploads/2018/04/pass1.png" alt="pass1" width="859" height="721" class="aligncenter size-full wp-image-2293" />
+
+这个过程，就好像你复制了一把钥匙给到你的朋友，你的朋友拿到你给他的钥匙之后，找个锁匠把他修改了一下，他手里的那把钥匙变成了开他家锁的钥匙。这时候，他打开自己家，就算是把房子点了，对你手里的钥匙，和你家的房子来说都是没有任何影响的。
+
+**所以，Java中的对象传递，如果是修改引用，是不会对原来的对象有任何影响的，但是如果直接修改共享对象的属性的值，是会对原来的对象有影响的。**
 
 ### 总结
 
-无论是值传递还是引用传递，其实都是一种求值策略([Evaluation strategy][7])。在求值策略中，还有一种叫做按共享传递(call by sharing)。其实Java中的参数传递严格意义上说应该是按共享传递。
+我们知道，编程语言中需要进行方法间的参数传递，这个传递的策略叫做求值策略。
 
-> 按共享传递，是指在调用函数时，传递给函数的是实参的地址的拷贝（如果实参在栈中，则直接拷贝该值）。在函数内部对参数进行操作时，需要先拷贝的地址寻找到具体的值，再进行操作。如果该值在栈中，那么因为是直接拷贝的值，所以函数内部对参数进行操作不会对外部变量产生影响。如果原来拷贝的是原值在堆中的地址，那么需要先根据该地址找到堆中对应的位置，再进行操作。因为传递的是地址的拷贝所以函数内对值的操作对外部变量是可见的。
+在程序设计中，求值策略有很多种，比较常见的就是值传递和引用传递。还有一种值传递的特例——共享对象传递。
 
-简单点说，Java中的传递，是值传递，而这个值，实际上是对象的引用。
+值传递和引用传递最大的区别是传递的过程中有没有复制出一个副本来，如果是传递副本，那就是值传递，否则就是引用传递。
 
-而按共享传递其实只是按值传递的一个特例罢了。所以我们可以说Java的传递是按共享传递，或者说Java中的传递是值传递。
+在Java中，其实是通过值传递实现的参数传递，只不过对于Java对象的传递，传递的内容是对象的引用。
+
+**我们可以总结说，Java中的求值策略是共享对象传递，这是完全正确的。**
+
+但是，为了让大家都能理解你说的，**我们说Java中只有值传递，只不过传递的内容是对象的引用。这也是没毛病的。**
+
+但是，绝对不能认为Java中有引用传递。
+
+OK，以上就是本文的全部内容，不知道本文是否帮助你解开了你心中一直以来的疑惑。欢迎留言说一下你的想法。
 
 ### 参考资料
 
-[Evaluation strategy][7] 
+[The Java™ Tutorials][3]
 
-[关于值传递和引用传递][8] 
+[Evaluation strategy][4]
 
-[按值传递、按引用传递、按共享传递][9] 
+[Is Java “pass-by-reference” or “pass-by-value”?][5]
 
-[Is Java “pass-by-reference” or “pass-by-value”?][2]
+[Passing by Value vs. by Reference Visual Explanation][6]
 
-[1]: http://www.hollischuang.com/wp-content/uploads/2018/04/question.png
-[2]: https://stackoverflow.com/questions/40480/is-java-pass-by-reference-or-pass-by-value
-[3]: http://www.hollischuang.com/wp-content/uploads/2018/04/pass.jpg
-[4]: http://www.hollischuang.com/wp-content/uploads/2018/04/pass1.png
-[5]: http://www.hollischuang.com/wp-content/uploads/2018/04/pass21.png
-[6]: http://www.hollischuang.com/wp-content/uploads/2018/04/pass3.png
-[7]: https://en.wikipedia.org/wiki/Evaluation_strategy
-[8]: http://chenwenbo.github.io/2016/05/11/%E5%85%B3%E4%BA%8E%E5%80%BC%E4%BC%A0%E9%80%92%E5%92%8C%E5%BC%95%E7%94%A8%E4%BC%A0%E9%80%92/
-[9]: http://menzhongxin.com/2017/02/07/%E6%8C%89%E5%80%BC%E4%BC%A0%E9%80%92-%E6%8C%89%E5%BC%95%E7%94%A8%E4%BC%A0%E9%80%92%E5%92%8C%E6%8C%89%E5%85%B1%E4%BA%AB%E4%BC%A0%E9%80%92/
+ [3]: https://docs.oracle.com/javase/tutorial/java/javaOO/arguments.html
+ [4]: https://en.wikipedia.org/wiki/Evaluation_strategy
+ [5]: https://stackoverflow.com/questions/40480/is-java-pass-by-reference-or-pass-by-value
+ [6]: https://blog.penjee.com/passing-by-value-vs-by-reference-java-graphical/
